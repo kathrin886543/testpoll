@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test-Pool mit IndexedDB</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        header {
+            background-color: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .button {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 16px;
+            color: white;
+            background-color: #4caf50;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            text-align: center;
+            transition: background-color 0.3s;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #45a049;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input[type="file"] {
+            padding: 5px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: #4caf50;
+        }
+
+        .form-group button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            color: white;
+            background-color: #4caf50;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .form-group button:hover {
+            background-color: #45a049;
+        }
+
+        .thank-you-message {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #4caf50;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .test-container {
+            margin-top: 10px;
+        }
+
+        .test-container div {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .test-container img {
+            max-width: 100px;
+            margin-right: 10px;
+        }
+
+        .delete-button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-left: 20px;
+        }
+
+        .delete-button:hover {
+            background-color: #d32f2f;
+        }
+
+        .download-button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-left: 20px;
+        }
+
+        .download-button:hover {
+            background-color: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Willkommen im Test-Pool der Dachsberger!</h1>
+        <div id="admin-login" style="text-align: right;">
+            <button id="login-btn" class="button" onclick="login()">Login als Admin</button>
+            <button id="logout-btn" class="button" style="display: none;" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <!-- Test einstellen -->
+    <div class="container" id="test-einstellen">
+        <h2>Test einstellen</h2>
+        <form id="test-form">
+            <div class="form-group">
+                <label for="jahr">Jahr:</label>
+                <input type="number" id="jahr" name="jahr" required>
+            </div>
+            <div class="form-group">
+                <label for="fach">Fach:</label>
+                <input type="text" id="fach" name="fach" required>
+            </div>
+            <div class="form-group">
+                <label for="klasse">Klasse:</label>
+                <select id="klasse" name="klasse" required onchange="toggleCategoryField()">
+                    <option value="1">Klasse 1</option>
+                    <option value="2">Klasse 2</option>
+                    <option value="3">Klasse 3</option>
+                    <option value="4">Klasse 4</option>
+                    <option value="5">Klasse 5</option>
+                    <option value="6">Klasse 6</option>
+                    <option value="7">Klasse 7</option>
+                    <option value="8">Klasse 8</option>
+                </select>
+            </div>
+            <div class="form-group" id="category-field" style="display: none;">
+                <label for="category">Kategorie:</label>
+                <select id="category" name="category">
+                    <option value="nawi">Nawi</option>
+                    <option value="gewi">Gewi</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="test-upload">Foto vom Test:</label>
+                <input type="file" id="test-upload" name="test-upload" accept="image/*" required>
+            </div>
+            <div class="form-group">
+                <button type="submit">Test hochladen</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Container für Tests -->
+    <div class="container">
+        <h2>Tests nach Klassen</h2>
+        <button class="button" onclick="showTests(1)">Zeige Test 1. Klasse</button>
+        <div id="klasse-1" class="test-container" style="display:none;">
+            <h3>Tests der 1. Klasse</h3>
+        </div>
+
+        <button class="button" onclick="showTests(2)">Zeige Test 2. Klasse</button>
+        <div id="klasse-2" class="test-container" style="display:none;">
+            <h3>Tests der 2. Klasse</h3>
+        </div>
+
+        <button class="button" onclick="showTests(3)">Zeige Test 3. Klasse</button>
+        <div id="klasse-3" class="test-container" style="display:none;">
+            <h3>Tests der 3. Klasse</h3>
+        </div>
+
+        <button class="button" onclick="showTests(4)">Zeige Test 4. Klasse</button>
+        <div id="klasse-4" class="test-container" style="display:none;">
+            <h3>Tests der 4. Klasse</h3>
+        </div>
+
+        <button class="button" onclick="showTests(5)">Zeige Test 5. Klasse</button>
+        <div id="klasse-5" class="test-container" style="display:none;">
+            <h3>Tests der 5. Klasse</h3>
+        </div>
+
+        <button class="button" onclick="showTests(6)">Zeige Test 6. Klasse</button>
+        <div id="klasse-6" class="test-container" style="display:none;">
+            <h3>Tests der 6. Klasse</h3>
+        </div>
+
+        <button class="button" onclick="showTests(7)">Zeige Test 7. Klasse</button>
+        <div id="klasse-7" class="test-container" style="display:none;">
+            <h3>Tests der 7. Klasse</h3>
+        </div>
+
+        <button class="button" onclick="showTests(8)">Zeige Test 8. Klasse</button>
+        <div id="klasse-8" class="test-container" style="display:none;">
+            <h3>Tests der 8. Klasse</h3>
+        </div>
+    </div>
+
+    <!-- Konfetti Nachricht -->
+    <div class="thank-you-message" id="thank-you-message">
+        Danke, dass du die Anderen unterstützt!
+    </div>
+
+    <!-- Canvas für Konfetti -->
+    <canvas id="confetti-canvas" style="position: fixed; top: 0; left: 0; pointer-events: none;"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti"></script>
+    <script>
+        let db;
+        let isAdmin = false; // Admin-Status
+
+        const request = indexedDB.open("TestDatabase", 1);
+
+        request.onupgradeneeded = function (event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains("tests")) {
+                db.createObjectStore("tests", { keyPath: "id", autoIncrement: true });
+            }
+        };
+
+        request.onsuccess = function (event) {
+            db = event.target.result;
+            loadTests();
+        };
+
+        request.onerror = function (event) {
+            console.error("Fehler beim Öffnen der IndexedDB:", event.target.error);
+        };
+
+        // Admin Login
+        function login() {
+            const password = prompt("Bitte Passwort eingeben:");
+            if (password === "Schule") {
+                isAdmin = true;
+                document.getElementById("login-btn").style.display = "none";
+                document.getElementById("logout-btn").style.display = "inline";
+                loadTests();
+            } else {
+                alert("Falsches Passwort!");
+            }
+        }
+
+        // Admin Logout
+        function logout() {
+            isAdmin = false;
+            document.getElementById("login-btn").style.display = "inline";
+            document.getElementById("logout-btn").style.display = "none";
+            loadTests();
+        }
+
+        // Kategorieauswahl bei Klassen 5-8
+        function toggleCategoryField() {
+            const klasse = document.getElementById("klasse").value;
+            const categoryField = document.getElementById("category-field");
+            if (klasse >= 5 && klasse <= 8) {
+                categoryField.style.display = "block";
+            } else {
+                categoryField.style.display = "none";
+            }
+        }
+
+        // Test speichern
+        document.getElementById("test-form").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            const jahr = document.getElementById("jahr").value;
+            const fach = document.getElementById("fach").value;
+            const klasse = document.getElementById("klasse").value;
+            const category = document.getElementById("category") ? document.getElementById("category").value : null;
+            const testUpload = document.getElementById("test-upload").files[0];
+
+            if (!testUpload) {
+                alert("Bitte ein Bild auswählen!");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const imageData = event.target.result;
+
+                const transaction = db.transaction(["tests"], "readwrite");
+                const store = transaction.objectStore("tests");
+
+                const testObject = {
+                    jahr,
+                    fach,
+                    klasse,
+                    category,
+                    imageData,
+                    timestamp: Date.now()
+                };
+                store.add(testObject);
+
+                transaction.oncomplete = function () {
+                    loadTests();
+                    showConfetti();
+                    showThankYouMessage();
+                };
+
+                transaction.onerror = function (event) {
+                    console.error("Fehler beim Speichern des Tests:", event.target.error);
+                };
+            };
+
+            reader.readAsDataURL(testUpload); 
+        });
+
+        // Tests laden
+        function loadTests() {
+            const transaction = db.transaction(["tests"], "readonly");
+            const store = transaction.objectStore("tests");
+            const request = store.getAll();
+
+            request.onsuccess = function () {
+                const tests = request.result;
+
+                // Tests den richtigen Klassen-Containern zuordnen
+                tests.forEach(test => {
+                    const testDiv = document.createElement("div");
+                    const info = document.createElement("p");
+                    info.textContent = `${test.fach} - Jahr ${test.jahr}`;
+                    const img = document.createElement("img");
+                    img.src = test.imageData;
+
+                    testDiv.appendChild(info);
+                    testDiv.appendChild(img);
+
+                    // Download-Button für alle Benutzer sichtbar
+                    const downloadButton = document.createElement("button");
+                    downloadButton.textContent = "Test herunterladen";
+                    downloadButton.classList.add("download-button");
+                    downloadButton.onclick = function () { downloadTest(test) };
+                    testDiv.appendChild(downloadButton);
+
+                    // Löschen-Button nur für Admins
+                    if (isAdmin) {
+                        const deleteButton = document.createElement("button");
+                        deleteButton.textContent = "Test löschen";
+                        deleteButton.classList.add("delete-button");
+                        deleteButton.onclick = function () { deleteTest(test.id, testDiv) };
+                        testDiv.appendChild(deleteButton);
+                    }
+
+                    // Test zum richtigen Klassen-Container hinzufügen
+                    document.getElementById(`klasse-${test.klasse}`).appendChild(testDiv);
+                });
+            };
+
+            request.onerror = function (event) {
+                console.error("Fehler beim Laden der Tests:", event.target.error);
+            };
+        }
+
+        // Test anzeigen
+        function showTests(klasse) {
+            const container = document.getElementById(`klasse-${klasse}`);
+            container.style.display = container.style.display === "none" ? "block" : "none";
+        }
+
+        // Test herunterladen
+        function downloadTest(test) {
+            const link = document.createElement("a");
+            link.href = test.imageData;
+            link.download = `Test_${test.fach}_${test.jahr}.png`;
+            link.click();
+        }
+
+        // Test löschen
+        function deleteTest(testId, testDiv) {
+            const transaction = db.transaction(["tests"], "readwrite");
+            const store = transaction.objectStore("tests");
+            store.delete(testId);
+
+            transaction.oncomplete = function () {
+                testDiv.remove();
+            };
+
+            transaction.onerror = function (event) {
+                console.error("Fehler beim Löschen des Tests:", event.target.error);
+            };
+        }
+
+        // Konfetti anzeigen
+        function showConfetti() {
+            const canvas = document.getElementById("confetti-canvas");
+            const confetti = canvasConfetti.create(canvas, {
+                resize: true,
+                useWorker: true
+            });
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+
+        // Dankeschön-Nachricht anzeigen
+        function showThankYouMessage() {
+            const message = document.getElementById("thank-you-message");
+            message.style.display = "block";
+            setTimeout(() => {
+                message.style.display = "none";
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
